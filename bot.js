@@ -6,14 +6,23 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res) => res.send('Robotul functioneaza cu Pairing Code!'));
+app.get('/', (req, res) => res.send('Robotul functioneaza cu Pairing Code Curat!'));
 app.listen(PORT, () => console.log(`Server web pornit pe portul ${PORT}`));
 
 // --- INTRODUCE NUMĂRUL TĂU DE TELEFON AICI ---
-// Format: codul țării urmat de număr (ex pentru România: 40712345678), fără "+" sau spații
 const NUMAR_TELEFON_BOT = "40741733271"; 
 
 const sessionDir = path.join(__dirname, 'session');
+
+// Ștergem fișierele vechi și corupte de sesiune înainte de pornire pentru a repara eroarea "Invalid buffer"
+if (fs.existsSync(sessionDir)) {
+    try {
+        fs.rmSync(sessionDir, { recursive: true, force: true });
+        console.log('S-a curatat cache-ul vechi pentru a preveni erorile de buffer.');
+    } catch (err) {
+        console.error('Nu s-a putut sterge folderul de sesiune:', err);
+    }
+}
 
 async function pornesteBot() {
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
@@ -21,15 +30,13 @@ async function pornesteBot() {
     console.log('Se initializeaza conexiunea directa la WhatsApp...');
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false // Dezactivăm codul QR definitiv
+        printQRInTerminal: false
     });
 
-    // Dacă botul nu este conectat, cerem un Pairing Code în loc de QR
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
                 let code = await sock.requestPairingCode(NUMAR_TELEFON_BOT);
-                // Formatăm codul frumos cu o cratimă la mijloc: XXXX-XXXX
                 code = code?.match(/.{1,4}/g)?.join("-") || code;
                 console.log('\n==================================================');
                 console.log(`CODUL TĂU DE CONECTARE ESTE: ${code}`);
@@ -37,7 +44,7 @@ async function pornesteBot() {
             } catch (error) {
                 console.error('Eroare la generarea codului de conectare:', error);
             }
-        }, 3000); // Așteptăm 3 secunde pentru siguranță
+        }, 4000); // Am mărit timpul la 4 secunde pentru stabilitate pe Render
     }
 
     sock.ev.on('creds.update', saveCreds);
@@ -46,8 +53,10 @@ async function pornesteBot() {
         const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
-            const arTrebuieSaReporneasca = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Conexiune inchisa. Repornire automata:', arTrebuieSaReporneasca);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const arTrebuieSaReporneasca = statusCode !== DisconnectReason.loggedOut;
+            console.log(`Conexiune inchisa (Cod: ${statusCode}). Repornire automata:`, arTrebuieSaReporneasca);
+            
             if (arTrebuieSaReporneasca) {
                 pornesteBot();
             }
@@ -59,7 +68,7 @@ async function pornesteBot() {
     });
 
     sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
+        const msg = m.messages;
         if (!msg?.message || msg?.key?.fromMe) return;
 
         const jid = msg.key.remoteJid;
@@ -76,3 +85,4 @@ async function pornesteBot() {
 }
 
 pornesteBot();
+
