@@ -28,26 +28,20 @@ if (process.env.SESSION_ID) {
     console.log('Atenție: Variabila SESSION_ID nu a fost găsită în setările cloud-ului!');
 }
 
-// --- CONFIGURARE BROWSER LINUX PE RENDER ---
-// Pe Render, când instalăm Chromium nativ, acesta se găsește la această cale:
-const linuxChromiumPath = '/usr/bin/chromium-browser';
-
+// --- CONFIGURARE LANSATOR REDUS PENTRU CLOUD ---
 const puppeteerOptions = {
-    headless: true,
+    headless: "new", // Folosește noul mod headless optimizat pentru servere mici
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome', // Render injectează automat această cale dacă detectează medii Node
     args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--disable-dev-shm-usage', 
-        '--disable-gpu'
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process'
     ]
 };
-
-if (fs.existsSync(linuxChromiumPath)) {
-    console.log(`S-a găsit Chromium preinstalat la: ${linuxChromiumPath}`);
-    puppeteerOptions.executablePath = linuxChromiumPath;
-} else {
-    console.log('Chromium nu a fost găsit la calea fixă. Se folosește configurarea automată.');
-}
 
 // Inițializare client WhatsApp
 const client = new Client({
