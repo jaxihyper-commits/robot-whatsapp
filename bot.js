@@ -5,21 +5,15 @@ const path = require('path');
 const express = require('express');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Robotul functioneaza in Cloud!'));
+// Portul implicit pentru Oracle Cloud (sau poți folosi orice port dorești)
+const PORT = process.env.PORT || 3000; 
+
+app.get('/', (req, res) => res.send('Robotul functioneaza in Oracle Cloud Free Tier!'));
 app.listen(PORT, () => console.log(`Server web pornit pe portul ${PORT}`));
 
-const authPath = path.join(__dirname, '.wwebjs_auth');
-if (fs.existsSync(authPath)) {
-    try {
-        fs.rmSync(authPath, { recursive: true, force: true });
-    } catch (err) {
-        console.log('Se curata memoria cache...');
-    }
-}
-
+// Inițializare client WhatsApp cu salvarea permanentă a sesiunii
 const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new LocalAuth(), // Sesiunea se va salva în folderul .wwebjs_auth și nu va mai fi ștearsă
     puppeteer: {
         headless: true,
         args: [
@@ -29,23 +23,27 @@ const client = new Client({
             '--disable-gpu'
         ]
     },
-    // REPARARE: Folosim versiunea locala din cache ca sa nu mai dea eroare de internet [wwebjs.dev]
+    // Folosim versiunea locală din cache pentru stabilitate crescută
     webVersionCache: {
         type: 'local',
         path: path.join(__dirname, '.wwebjs_cache')
     }
 });
 
-console.log('Se porneste robotul stabil pe Render...');
+console.log('Se porneste robotul stabil pe Oracle Cloud...');
 
+// Generare cod QR în terminal
 client.on('qr', (qr) => {
+    console.log('Scanează codul QR de mai jos pentru a te conecta:');
     qrcode.generate(qr, { small: false });
 });
 
+// Eveniment când botul s-a conectat cu succes
 client.on('ready', () => {
     console.log('Robotul tau de WhatsApp este gata si ruleaza in Cloud 24/7!');
 });
 
+// Logica pentru comenzi
 client.on('message_create', async (msg) => {
     const text = msg.body.toLowerCase();
 
@@ -61,7 +59,7 @@ client.on('message_create', async (msg) => {
 
     // 3. Comanda pentru Reguli
     if (text.includes('!reguli')) {
-        await msg.reply('1.Va rugam sa nu spamati \n2.Faceti glume cu bunul simti si cine va permite');
+        await msg.reply('1.Va rugam sa nu spamati \n2.Faceti glume cu bunul simt si cu cine va permite');
     }
 });
 
