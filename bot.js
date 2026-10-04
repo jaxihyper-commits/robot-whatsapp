@@ -19,7 +19,7 @@ console.log('Se porneste robotul actualizat pe Render...');
 
 client.on('qr', (qr) => {
     console.log('SUCCES! Codul QR a fost generat mai jos:');
-    qrcode.generate(qr, { small: true });
+    qrcode.generate(qr, { small: false });
 });
 
 client.on('ready', () => {
