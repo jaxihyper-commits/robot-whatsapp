@@ -5,7 +5,7 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "puppeteer:install": "node node_modules/puppeteer/install.mjs"
+    "render-build": "npm install && npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "express": "^4.19.2",
