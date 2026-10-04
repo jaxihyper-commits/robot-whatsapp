@@ -4,8 +4,7 @@
   "description": "WhatsApp Bot configurat cu TCT Session ID pentru Render",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "render-build": "npm install && npx puppeteer browsers install chrome"
+    "start": "node bot.js"
   },
   "dependencies": {
     "express": "^4.19.2",
