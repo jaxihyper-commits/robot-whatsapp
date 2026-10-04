@@ -1,19 +1,16 @@
 {
   "name": "whatsapp-tct-bot",
   "version": "1.0.0",
-  "description": "WhatsApp Bot configurat cu TCT Session ID pentru Render",
+  "description": "WhatsApp Bot cu Baileys optimizat pentru Render Background Worker",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "whatsapp-web.js": "^1.23.0",
-    "puppeteer-core": "^21.5.0"
+    "@whiskeysockets/baileys": "^6.7.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "author": "",
-  "license": "ISC"
+  }
 }
