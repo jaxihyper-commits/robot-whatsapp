@@ -1,5 +1,4 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
-const qrcode = require("qrcode-terminal");
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
@@ -7,10 +6,13 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/', (req, res) => res.send('Robotul functioneaza direct pe Render!'));
+app.get('/', (req, res) => res.send('Robotul functioneaza cu Pairing Code!'));
 app.listen(PORT, () => console.log(`Server web pornit pe portul ${PORT}`));
 
-// Folderul local unde se vor salva fișierele de autentificare pe serverul tău plătit
+// --- INTRODUCE NUMĂRUL TĂU DE TELEFON AICI ---
+// Format: codul țării urmat de număr (ex pentru România: 40712345678), fără "+" sau spații
+const NUMAR_TELEFON_BOT = "40741733271"; 
+
 const sessionDir = path.join(__dirname, 'session');
 
 async function pornesteBot() {
@@ -19,22 +21,29 @@ async function pornesteBot() {
     console.log('Se initializeaza conexiunea directa la WhatsApp...');
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false // Îl printăm manual mai jos pentru o formatare mai curată
+        printQRInTerminal: false // Dezactivăm codul QR definitiv
     });
+
+    // Dacă botul nu este conectat, cerem un Pairing Code în loc de QR
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                let code = await sock.requestPairingCode(NUMAR_TELEFON_BOT);
+                // Formatăm codul frumos cu o cratimă la mijloc: XXXX-XXXX
+                code = code?.match(/.{1,4}/g)?.join("-") || code;
+                console.log('\n==================================================');
+                console.log(`CODUL TĂU DE CONECTARE ESTE: ${code}`);
+                console.log('==================================================\n');
+            } catch (error) {
+                console.error('Eroare la generarea codului de conectare:', error);
+            }
+        }, 3000); // Așteptăm 3 secunde pentru siguranță
+    }
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Generare cod QR direct în panoul Render Logs dacă botul nu este conectat
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (qr) {
-            console.log('\n==================================================');
-            console.log('SCANEAZĂ CODUL QR DE MAI JOS CU TELEFONUL TĂU:');
-            console.log('==================================================\n');
-            qrcode.generate(qr, { small: true });
-            console.log('\n==================================================\n');
-        }
+        const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
             const arTrebuieSaReporneasca = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -49,27 +58,20 @@ async function pornesteBot() {
         }
     });
 
-    // Logica comenzi text
     sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages;
-        if (!msg[0]?.message || msg[0]?.key?.fromMe) return;
+        const msg = m.messages[0];
+        if (!msg?.message || msg?.key?.fromMe) return;
 
-        const jid = msg[0].key.remoteJid;
-        const textulMesajului = (msg[0].message.conversation || msg[0].message.extendedTextMessage?.text || '').toLowerCase();
+        const jid = msg.key.remoteJid;
+        const textulMesajului = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase();
 
         const trimiteMesaj = async (text) => {
-            await sock.sendMessage(jid, { text: text }, { quoted: msg[0] });
+            await sock.sendMessage(jid, { text: text }, { quoted: msg });
         };
 
-        if (textulMesajului.includes('!tiktok')) {
-            await trimiteMesaj('Acesta este contul lui Adi de tiktok unde facem live-uri : https://www.tiktok.com/@nesstywf');
-        }
-        if (textulMesajului.includes('!discord')) {
-            await trimiteMesaj('Acesta este serverul nostru de discord : https://discord.gg/R7wWb6SZwD');
-        }
-        if (textulMesajului.includes('!reguli')) {
-            await trimiteMesaj('1.Va rugam sa nu spamati \n2.Faceti glume cu bunul simt si cu cine va permite');
-        }
+        if (textulMesajului.includes('!tiktok')) await trimiteMesaj('TikTok: https://www.tiktok.com/@nesstywf');
+        if (textulMesajului.includes('!discord')) await trimiteMesaj('Discord: https://discord.gg/R7wWb6SZwD');
+        if (textulMesajului.includes('!reguli')) await trimiteMesaj('1.Va rugam sa nu spamati \n2.Faceti glume cu bunul simt.');
     });
 }
 
