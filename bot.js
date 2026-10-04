@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 
-// Pornim serverul web pentru a opri eroarea de port binding pe Render
 const app = express();
 const PORT = process.env.PORT || 10000;
 app.get('/', (req, res) => res.send('Robotul functioneaza in Cloud!'));
@@ -30,13 +29,14 @@ const client = new Client({
             '--disable-gpu'
         ]
     },
+    // REPARARE: Folosim versiunea locala din cache ca sa nu mai dea eroare de internet [wwebjs.dev]
     webVersionCache: {
-        type: 'remote',
-        remotePath: 'https://githubusercontent.com'
+        type: 'local',
+        path: path.join(__dirname, '.wwebjs_cache')
     }
 });
 
-console.log('Se porneste robotul cu logare rapida pentru iPhone...');
+console.log('Se porneste robotul stabil pe Render...');
 
 client.on('qr', (qr) => {
     qrcode.generate(qr, { small: false });
@@ -66,4 +66,5 @@ client.on('message_create', async (msg) => {
 });
 
 client.initialize();
+
 
