@@ -28,9 +28,9 @@ if (process.env.SESSION_ID) {
     console.log('Atenție: Variabila SESSION_ID nu a fost găsită în setările cloud-ului!');
 }
 
-// --- CONFIGURARE COMPATIBILITATE CHROME PE RENDER ---
-// Căutăm calea standard unde Render salvează browserul prin comanda "npx puppeteer"
-const chromePath = '/home/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
+// --- CONFIGURARE BROWSER LINUX PE RENDER ---
+// Pe Render, când instalăm Chromium nativ, acesta se găsește la această cale:
+const linuxChromiumPath = '/usr/bin/chromium-browser';
 
 const puppeteerOptions = {
     headless: true,
@@ -42,15 +42,14 @@ const puppeteerOptions = {
     ]
 };
 
-// Dacă fișierul Chrome există la calea de pe Render, forțăm Puppeteer să îl folosească
-if (fs.existsSync(chromePath)) {
-    console.log(`S-a găsit browserul Chrome la calea: ${chromePath}`);
-    puppeteerOptions.executablePath = chromePath;
+if (fs.existsSync(linuxChromiumPath)) {
+    console.log(`S-a găsit Chromium preinstalat la: ${linuxChromiumPath}`);
+    puppeteerOptions.executablePath = linuxChromiumPath;
 } else {
-    console.log('Atenție: Chrome nu a fost găsit la calea fixă. Se încearcă pornirea standard...');
+    console.log('Chromium nu a fost găsit la calea fixă. Se folosește configurarea automată.');
 }
 
-// Inițializare client WhatsApp optimizat
+// Inițializare client WhatsApp
 const client = new Client({
     takeoverOnConflict: true,
     puppeteer: puppeteerOptions,
@@ -86,7 +85,6 @@ client.on('message_create', async (msg) => {
 });
 
 client.initialize();
-
 
 
 
