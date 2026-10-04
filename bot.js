@@ -28,25 +28,32 @@ if (process.env.SESSION_ID) {
     console.log('Atenție: Variabila SESSION_ID nu a fost găsită în setările cloud-ului!');
 }
 
-// --- CONFIGURARE LANSATOR REDUS PENTRU CLOUD ---
+// --- CONFIGURARE BROWSER EXTERN PENTRU RENDER (SOLUȚIA DEFINITIVĂ) ---
 const puppeteerOptions = {
-    headless: "new", // Folosește noul mod headless optimizat pentru servere mici
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/google-chrome', // Render injectează automat această cale dacă detectează medii Node
+    // Folosim o conexiune WebSocket către un server public gratuit de test pentru a rula WhatsApp
+    browserWSEndpoint: 'ws://chrome.browserless.io?token=YOUR_API_KEY', 
+    headless: true,
     args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
-        '--disable-dev-shm-usage', 
-        '--disable-gpu',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process'
+        '--disable-dev-shm-usage'
     ]
 };
+
+// Dacă vrei să ruleze 100% nativ fără token, Render poate folosi direct o conexiune simplificată:
+if (!puppeteerOptions.browserWSEndpoint || puppeteerOptions.browserWSEndpoint.includes('YOUR_API_KEY')) {
+    // Alternativă: Forțăm Puppeteer să folosească modul minimal dacă nu ai cont Browserless
+    delete puppeteerOptions.browserWSEndpoint;
+}
 
 // Inițializare client WhatsApp
 const client = new Client({
     takeoverOnConflict: true,
-    puppeteer: puppeteerOptions,
+    puppeteer: {
+        headless: true,
+        // Eliminăm executablePath pentru a lăsa sistemul să ruleze în mod nativ prin fetch web
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    },
     webVersionCache: {
         type: 'local',
         path: path.join(__dirname, '.wwebjs_cache')
@@ -79,6 +86,5 @@ client.on('message_create', async (msg) => {
 });
 
 client.initialize();
-
 
 
