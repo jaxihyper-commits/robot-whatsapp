@@ -21,18 +21,17 @@ async function pornesteBot() {
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        syncFullHistory: false,    // REPARĂ EROAREA: Oprește sync-ul vechi care bloca botul
-        markOnlineOnConnect: true  // Arată botul online imediat ce se conectează
+        syncFullHistory: false,      // Oprește complet istoricul vechi
+        markOnlineOnConnect: true    // Arată botul online instant
     });
 
-    // Dacă sesiunea s-a pierdut, cerem din nou codul text
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
                 let code = await sock.requestPairingCode(NUMAR_TELEFON_BOT);
                 code = code?.match(/.{1,4}/g)?.join("-") || code;
                 console.log('\n==================================================');
-                console.log(`CODUL TĂU DE CONECTARE ESTE: ${code}`);
+                console.log(`CODUL TĂU NOU DE CONECTARE ESTE: ${code}`);
                 console.log('==================================================\n');
             } catch (error) {
                 console.error('Eroare la generarea codului de conectare:', error);
@@ -47,12 +46,18 @@ async function pornesteBot() {
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
-            const arTrebuieSaReporneasca = statusCode !== DisconnectReason.loggedOut;
-            console.log(`Conexiune inchisa (Cod: ${statusCode}). Repornire automata:`, arTrebuieSaReporneasca);
+            console.log(`Conexiune inchisa cu codul: ${statusCode}`);
             
-            if (arTrebuieSaReporneasca) {
-                pornesteBot();
+            // Dacă eroarea este de tip "Invalid buffer" sau sesiunea e coruptă, curățăm folderul local automat
+            if (statusCode === 400 || statusCode === DisconnectReason.loggedOut) {
+                console.log('Sesiune corupta detectata. Se curata folderul session...');
+                try {
+                    fs.rmSync(sessionDir, { recursive: true, force: true });
+                } catch (e) {}
             }
+            
+            console.log('Se incearca repornirea automata...');
+            pornesteBot();
         } else if (connection === 'open') {
             console.log('\n==================================================');
             console.log('Robotul tau de WhatsApp este ONLINE si ruleaza 24/7!');
@@ -61,19 +66,16 @@ async function pornesteBot() {
     });
 
     sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0]; // Luăm primul mesaj primit
+        const msg = m.messages[0];
         if (!msg?.message || msg?.key?.fromMe) return;
 
         const jid = msg.key.remoteJid;
-        
-        // Citim corect textul din mesaj (indiferent dacă e simplu sau răspuns)
         const textulMesajului = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').toLowerCase();
 
         const trimiteMesaj = async (text) => {
             await sock.sendMessage(jid, { text: text }, { quoted: msg });
         };
 
-        // Comenzi active
         if (textulMesajului.includes('!tiktok')) {
             await trimiteMesaj('Acesta este contul lui Adi de tiktok unde facem live-uri : https://www.tiktok.com/@nesstywf');
         }
@@ -85,5 +87,18 @@ async function pornesteBot() {
         }
     });
 }
+
+// Prindem eroarea de "Invalid buffer" la nivel global pentru a nu opri scriptul, ci a-l reporni curat
+process.on('uncaughtException', (err) => {
+    if (err.message.includes('Invalid buffer')) {
+        console.log('S-a prins eroarea "Invalid buffer". Se forțează resetarea sesiunii...');
+        try {
+            fs.rmSync(sessionDir, { recursive: true, force: true });
+        } catch (e) {}
+        process.exit(1); // Render va restarta serviciul instant, pornind de la zero curat
+    } else {
+        console.error('Alta eroare neasteptata:', err);
+    }
+});
 
 pornesteBot();
